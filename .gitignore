@@ -1,0 +1,17 @@
+# a generic gitignore
+*.elf
+*.hex
+*.bin
+*.eep
+*.lss
+*.map
+*.sym
+build/
+.build/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
