@@ -1,97 +1,65 @@
 # Space Invaders on FPGA
 
-This is a **Real-Time Streaming Graphics System** - essentially a Space Invaders-style game implemented on an FPGA with VGA output.
+Real-time streaming graphics system implementing Space Invaders on FPGA with VGA output and wireless PS5 controller support.
+
+## Hardware
+
+- **FPGA:** Nexys A7-100T
+- **Controller:** PS5 DualSense
+- **Bridge:** ESP32 dev board
+- **Display:** VGA monitor (640×480 @ 60Hz)
 
 ## Features
 
-**Input Pipeline:**
-- UART receiver (115200 baud) with 16x oversampling
-- Byte-to-packet converter (8 bytes → 64-bit AXI-Stream packets)
-- Packet type routing system (0x01=Player, 0x02=Bullet, 0x03=Enemy)
+**Graphics & Game Logic:**
+- VGA 640×480 @ 60Hz output
+- Player ship (green 16×16 sprite) with WASD-style movement
+- Projectile system (white 4×8 bullets)
+- Enemy grid (3×8 red 12×12 sprites, adaptive speed)
+- AABB collision detection
+- State machine: MENU → PLAYING → VICTORY/GAMEOVER
+- 16-LED animated status display
 
-**Game Logic:**
-- **Player control** (render_object_0): Green 16x16 sprite, movement via WASD-style packets, trigger signal for shooting
-- **Projectile system** (render_object_1): White 4x8 bullets that spawn from player and move upward
-- **Enemy grid** (render_group): 3×8 array of red 12x12 sprites with adaptive movement speed
-- **Collision detection** (spatial_intersect): AABB-based collision between projectiles and enemies
-- **State machine** (system_controller): MENU → PLAYING → VICTORY/GAMEOVER states
+**Input & Control:**
+- **PS5 DualSense wireless controller** via ESP32 bridge (see `esp32/`)
+- UART receiver (115200 baud, 16× oversampling)
+- Packet-based command routing (Player/Bullet/Enemy)
 
-**Visual Output:**
-- VGA 640×480 @ 60Hz timing generator
-- Multi-layer rendering with priority mixing
-- 16-LED status display with animated patterns
+## Quick Start
 
-**Timing & Orchestration:**
-- Adaptive scheduler that generates periodic events (faster when fewer enemies remain)
-- Priority arbiter merging UART commands and timer events
+1. **FPGA:** Synthesize and program Basys3 with `rtl/` sources
+2. **ESP32:** Wire GPIO17→C17, GPIO16←D18, GND→GND
+3. **Controller:** Follow `esp32/README.md` for DualSense setup
+4. **Play:** Press PS button, game auto-starts
 
-## How It Works
-
-### Data Flow
-
+## Architecture
 ```
-UART RX (Serial bytes)
-  ↓
-stream_adapter (Accumulates 8 bytes into 64-bit packets)
-  ↓
-stream_arbiter (Merges with scheduler_core timer events)
-  ↓
-stream_router (Routes by packet type: 0x01/0x02/0x03)
-  ↓
-┌─────────────┬──────────────┬─────────────┐
-│ Port 0      │ Port 1       │ Port 3      │
-│ Player      │ (Unused)     │ Enemy Grid  │
-│ Movement    │              │ Movement    │
-└─────────────┴──────────────┴─────────────┘
-  ↓               ↓               ↓
-render_object_0   (none)   render_group
-  ↓                           ↓
-Collision ← spatial_intersect → Detection
-  ↓
-VGA Mixer (Priority: Bullet > Player > Enemies)
-  ↓
-VGA Output (hsync/vsync/RGB)
+PS5 Controller (BLE) → ESP32 → UART → stream_adapter → stream_router
+                                           ↓
+                        ┌──────────────────┼──────────────────┐
+                        ↓                  ↓                  ↓
+                   Player Ship        Projectiles       Enemy Grid
+                        ↓                  ↓                  ↓
+                   Collision Detection (spatial_intersect)
+                        ↓
+                   VGA Mixer (Priority: Bullet > Player > Enemies)
+                        ↓
+                   VGA Output (640×480 @ 60Hz)
 ```
 
-### Packet Format
+## Controls
 
-**Current UART packet (8 bytes = 64 bits):**
-```
-Byte 0: Packet Type (0x01=Player, 0x03=Enemy)
-Byte 1: Direction (1=Up, 2=Down, 3=Left, 4=Right)
-Byte 2: Action (1=Trigger)
-Bytes 3-7: Reserved/unused
-```
+- **D-Pad / Left Stick:** Move ship
+- **X Button:** Shoot
+- **OPTIONS:** Restart game
 
-### State Machine
+## Packet Format
 
-```
-MENU (waiting) --[start_button]--> PLAYING
-                                      ↓
-                    ┌─────────────────┼─────────────────┐
-                    ↓                 ↓                 ↓
-               active_count==0    halt_condition    (continue)
-                    ↓                 ↓
-                 VICTORY          GAMEOVER
-                    ↓                 ↓
-              [start_button]   [start_button]
-                    └─────────────────┘
-                            ↓
-                         MENU
-```
+8-byte UART packets @ 115200 baud:
 
-## Work in progress...
-
-Adding PS5 Controller Support via ESP32:
-
-```
-PS5 Controller (BLE)
-  ↓
-ESP32 BLE Stack (PS5 controller library)
-  ↓
-Parse controller state
-  ↓
-Format into 8-byte packets
-  ↓
-UART TX → FPGA RX
-```
+| Byte | Field | Values |
+|------|-------|--------|
+| 0 | Type | 0x01=Player, 0x03=Enemy |
+| 1 | Direction | 0=none, 1=up, 2=down, 3=left, 4=right, 9=START |
+| 2 | Action | 0=none, 1=shoot |
+| 3-7 | Reserved | 0x00 |
