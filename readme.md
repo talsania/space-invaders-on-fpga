@@ -2,6 +2,8 @@
 
 Real-time streaming graphics system implementing Space Invaders on FPGA with VGA output and wireless PS5 controller support.
 
+![Pi7_Gif (2)](https://github.com/user-attachments/assets/8e8817f3-c19b-4684-9a1f-8929eeff392c)
+
 ## Hardware
 
 - **FPGA:** Nexys A7-100T
