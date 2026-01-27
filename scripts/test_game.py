@@ -5,10 +5,8 @@
 FPGA Game UART Test Script with START button support
 Tests Space Invaders game by sending control packets via serial
 
-Usage:
-    python test_game_with_start.py --port COM4        # Windows
+    python test_game_with_start.py --port COM4        # Win11
     python test_game_with_start.py --port /dev/ttyUSB0  # Linux
-    python test_game_with_start.py --port /dev/cu.usbserial  # macOS
 """
 
 import serial
@@ -17,7 +15,6 @@ import argparse
 import sys
 from dataclasses import dataclass
 
-# ANSI color codes for pretty output
 class Color:
     GREEN = '\033[92m'
     YELLOW = '\033[93m'

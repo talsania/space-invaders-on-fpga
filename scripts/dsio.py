@@ -2,21 +2,40 @@
 
 import pygame
 import serial
+import serial.tools.list_ports
 import time
+import sys
 
 pygame.init()
 pygame.joystick.init()
 
 # ---- UART ----
-ser = serial.Serial('COM4', 115200, timeout=1)
-print("✓ Connected to FPGA on COM4")
+def find_and_connect_serial():
+    """Try to connect to COM4, or list available ports if it fails."""
+    try:
+        ser = serial.Serial('COM4', 115200, timeout=1)
+        print("✓ Connected to FPGA on COM4")
+        return ser
+    except serial.SerialException as e:
+        print(f"❌ Failed to connect to COM4: {e}")
+        print("\n📋 Available COM ports:")
+        ports = list(serial.tools.list_ports.comports())
+        if ports:
+            for port in ports:
+                print(f"   - {port.device}: {port.description}")
+            print("\nPlease close any other programs using COM4 and try again.")
+        else:
+            print("   No COM ports found!")
+        sys.exit(1)
+
+ser = find_and_connect_serial()
 
 # ---- Controller ----
 pad = pygame.joystick.Joystick(0)
 pad.init()
 print(f"✓ Controller: {pad.get_name()}")
 
-# ---- Packet Structure (matching test_game.py) ----
+# ---- Packet Structure ----
 PACKET_TYPE_PLAYER = 0x01
 
 # Direction values
@@ -68,7 +87,7 @@ def send_packet(direction=DIR_NONE, action=ACTION_NONE):
     dir_str = dir_names.get(direction, f"0x{direction:02X}")
     action_str = action_names.get(action, f"0x{action:02X}")
     hex_str = ' '.join(f'{b:02X}' for b in packet)
-    print(f"📤 Dir:{dir_str:8} Action:{action_str:6} | {hex_str}")
+    print(f"Dir:{dir_str:8} Action:{action_str:6} | {hex_str}")
 
 def debounce(btn):
     now = time.time()
@@ -77,22 +96,31 @@ def debounce(btn):
     last_press[btn] = now
     return True
 
-print("\n🎮 Controls:")
+print("\nControls:")
 print("  D-Pad Up/Down/Left/Right → Move Player")
 print("  X (Cross)                → Fire Bullet")
 print("  SELECT/SHARE             → Start Game")
 print("  Press Ctrl+C to exit\n")
 
 # Send START signal on launch (like test_game.py does)
-print("🚀 Sending START signal to begin game...")
+print("Sending START signal to begin game...")
 send_packet(direction=DIR_START, action=ACTION_NONE)
 time.sleep(0.2)
 send_packet(direction=DIR_NONE, action=ACTION_NONE)  # Release START
 time.sleep(0.5)
-print("✓ Game should now be in PLAYING state\n")
+print("Game should now be in PLAYING state\n")
 
-# Track current direction for continuous movement
+# Track button states for continuous input
+button_states = {
+    'fire': False,
+    'up': False,
+    'down': False,
+    'left': False,
+    'right': False
+}
+
 current_direction = DIR_NONE
+current_action = ACTION_NONE
 
 clock = pygame.time.Clock()
 
@@ -102,55 +130,82 @@ try:
             if e.type == pygame.QUIT:
                 raise KeyboardInterrupt
                 
-            elif e.type == pygame.JOYBUTTONDOWN and debounce(e.button):
+            elif e.type == pygame.JOYBUTTONDOWN:
                 
                 # Fire button (X / Cross)
                 if e.button == 0:
-                    print("🔫 FIRE!")
-                    send_packet(direction=current_direction, action=ACTION_FIRE)
+                    if not button_states['fire']:
+                        print("FIRE!")
+                    button_states['fire'] = True
+                    current_action = ACTION_FIRE
                 
                 # SELECT/SHARE button (button 8 on most controllers)
-                elif e.button == 8:
-                    print("▶️  START/RESTART GAME")
+                elif e.button == 8 and debounce(e.button):
+                    print("START/RESTART GAME")
                     send_packet(direction=DIR_START, action=ACTION_NONE)
                     time.sleep(0.1)
                     send_packet(direction=DIR_NONE, action=ACTION_NONE)
                 
                 # D-Pad buttons
                 elif e.button == 11:  # D-Pad Up
-                    print("⬆️  MOVE UP")
+                    if not button_states['up']:
+                        print("MOVE UP")
+                    button_states['up'] = True
                     current_direction = DIR_UP
-                    send_packet(direction=DIR_UP, action=ACTION_NONE)
                     
                 elif e.button == 12:  # D-Pad Down
-                    print("⬇️  MOVE DOWN")
+                    if not button_states['down']:
+                        print("MOVE DOWN")
+                    button_states['down'] = True
                     current_direction = DIR_DOWN
-                    send_packet(direction=DIR_DOWN, action=ACTION_NONE)
                     
                 elif e.button == 13:  # D-Pad Left
-                    print("⬅️  MOVE LEFT")
+                    if not button_states['left']:
+                        print("MOVE LEFT")
+                    button_states['left'] = True
                     current_direction = DIR_LEFT
-                    send_packet(direction=DIR_LEFT, action=ACTION_NONE)
                     
                 elif e.button == 14:  # D-Pad Right
-                    print("➡️  MOVE RIGHT")
+                    if not button_states['right']:
+                        print("MOVE RIGHT")
+                    button_states['right'] = True
                     current_direction = DIR_RIGHT
-                    send_packet(direction=DIR_RIGHT, action=ACTION_NONE)
             
             elif e.type == pygame.JOYBUTTONUP:
-                # Send release events
+                # Update button states on release
                 if e.button == 0:  # Fire released
-                    send_packet(direction=current_direction, action=ACTION_NONE)
+                    button_states['fire'] = False
+                    current_action = ACTION_NONE
                     
-                elif e.button in [11, 12, 13, 14]:  # D-Pad released
-                    current_direction = DIR_NONE
-                    send_packet(direction=DIR_NONE, action=ACTION_NONE)
-
+                elif e.button == 11:  # D-Pad Up
+                    button_states['up'] = False
+                    if current_direction == DIR_UP:
+                        current_direction = DIR_NONE
+                    
+                elif e.button == 12:  # D-Pad Down
+                    button_states['down'] = False
+                    if current_direction == DIR_DOWN:
+                        current_direction = DIR_NONE
+                    
+                elif e.button == 13:  # D-Pad Left
+                    button_states['left'] = False
+                    if current_direction == DIR_LEFT:
+                        current_direction = DIR_NONE
+                    
+                elif e.button == 14:  # D-Pad Right
+                    button_states['right'] = False
+                    if current_direction == DIR_RIGHT:
+                        current_direction = DIR_NONE
+        
+        # Send continuous packets only when buttons are held (60 times per second)
+        if current_direction != DIR_NONE or current_action != ACTION_NONE:
+            send_packet(direction=current_direction, action=current_action)
+        
         clock.tick(60)
 
 except KeyboardInterrupt:
-    print("\n👋 Exiting...")
+    print("\nExiting...")
 finally:
     ser.close()
     pygame.quit()
-    print("✓ Cleanup complete")
+    print("Cleanup complete")
