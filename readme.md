@@ -2,6 +2,8 @@
 
 Real-time streaming graphics system implementing Space Invaders on FPGA with VGA output and wireless PS5 controller support.
 
+![Pi7_Gif (2)](https://github.com/user-attachments/assets/8e8817f3-c19b-4684-9a1f-8929eeff392c)
+
 ## Hardware
 
 - **FPGA:** Nexys A7-100T
@@ -27,16 +29,16 @@ Real-time streaming graphics system implementing Space Invaders on FPGA with VGA
 
 ## Quick Start
 
-1. **FPGA:** Synthesize and program Basys3 with `rtl/` sources
+1. **FPGA:** Synthesize and program nexys a7 with `rtl/` sources
 2. **ESP32:** Wire GPIO17→C17, GPIO16←D18, GND→GND
-3. **Controller:** Follow `esp32/README.md` for DualSense setup
+3. **Controller:** Follow `esp32/README.md` for DualSense controller setup
 4. **Play:** Press PS button, game auto-starts
 
 ## Architecture
 ```
 PS5 Controller (BLE) → ESP32 → UART → stream_adapter → stream_router
                                            ↓
-                        ┌──────────────────┼──────────────────┐
+                        ┌───────────────┼───────────────┐
                         ↓                  ↓                  ↓
                    Player Ship        Projectiles       Enemy Grid
                         ↓                  ↓                  ↓
@@ -44,7 +46,7 @@ PS5 Controller (BLE) → ESP32 → UART → stream_adapter → stream_router
                         ↓
                    VGA Mixer (Priority: Bullet > Player > Enemies)
                         ↓
-                   VGA Output (640×480 @ 60Hz)
+                   VGA Output (640×480 @60Hz)
 ```
 
 ## Controls
