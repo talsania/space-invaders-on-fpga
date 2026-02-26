@@ -81,7 +81,7 @@ def send_packet(direction=DIR_NONE, action=ACTION_NONE):
     }
     action_names = {
         ACTION_NONE: "---",
-        ACTION_FIRE: "FIRE!"
+        ACTION_FIRE: "FIRE"
     }
     
     dir_str = dir_names.get(direction, f"0x{direction:02X}")
@@ -135,7 +135,7 @@ try:
                 # Fire button (X / Cross)
                 if e.button == 0:
                     if not button_states['fire']:
-                        print("FIRE!")
+                        print("FIRE")
                     button_states['fire'] = True
                     current_action = ACTION_FIRE
                 

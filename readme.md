@@ -1,11 +1,10 @@
 # Space Invaders on FPGA
-
 Real-time streaming graphics system implementing Space Invaders on FPGA with VGA output and wireless PS5 controller support.
 
-![Pi7_Gif (2)](https://github.com/user-attachments/assets/8e8817f3-c19b-4684-9a1f-8929eeff392c)
+![Pi7_Gif (2)](https://github.com/user-attachments/assets/7a15b16e-33c9-46ed-bb4e-4b35170f9f7e)
+![PXL_20260125_151322105 MP](https://github.com/user-attachments/assets/1050ab68-de02-48a6-b7e5-e06620c5af32)
 
 ## Hardware
-
 - **FPGA:** Nexys A7-100T
 - **Controller:** PS5 DualSense
 - **Bridge:** ESP32 dev board
@@ -29,31 +28,49 @@ Real-time streaming graphics system implementing Space Invaders on FPGA with VGA
 
 ## Quick Start
 
-1. **FPGA:** Synthesize and program nexys a7 with `rtl/` sources
+1. **FPGA:** See [Building from Source](#building-from-source) below
 2. **ESP32:** Wire GPIO17→C17, GPIO16←D18, GND→GND
-3. **Controller:** Follow `esp32/README.md` for DualSense controller setup
+3. **Controller:** Follow `esp32/README.md` for DualSense pairing
 4. **Play:** Press PS button, game auto-starts
+
+## Building from Source
+
+Requires **Vivado 2022.x or later**.
+
+1. Clone the repo:
+```bash
+   git clone https://github.com/talsania/space-invaders-on-fpga.git
+```
+2. Open Vivado and in the Tcl Console run:
+```tcl
+   cd /path/to/space-invaders-on-fpga
+   source create_project.tcl
+```
+3. Vivado will recreate the project with all RTL sources and constraints linked.
+4. Click **Generate Bitstream**, then program the Nexys A7.
 
 ## Architecture
 ```
 PS5 Controller (BLE) → ESP32 → UART → stream_adapter → stream_router
-                                           ↓
-                        ┌───────────────┼───────────────┐
-                        ↓                  ↓                  ↓
-                   Player Ship        Projectiles       Enemy Grid
-                        ↓                  ↓                  ↓
+                                            ↓
+                        ┌───────────────────┼───────────────────┐
+                        ↓                   ↓                   ↓
+                   Player Ship         Projectiles         Enemy Grid
+                        ↓                   ↓                   ↓
                    Collision Detection (spatial_intersect)
                         ↓
                    VGA Mixer (Priority: Bullet > Player > Enemies)
                         ↓
-                   VGA Output (640×480 @60Hz)
+                   VGA Output (640×480 @ 60Hz)
 ```
 
 ## Controls
 
-- **D-Pad / Left Stick:** Move ship
-- **X Button:** Shoot
-- **OPTIONS:** Restart game
+| Input | Action |
+|-------|--------|
+| D-Pad / Left Stick | Move ship |
+| X Button | Shoot |
+| OPTIONS | Restart game |
 
 ## Packet Format
 
@@ -64,4 +81,14 @@ PS5 Controller (BLE) → ESP32 → UART → stream_adapter → stream_router
 | 0 | Type | 0x01=Player, 0x03=Enemy |
 | 1 | Direction | 0=none, 1=up, 2=down, 3=left, 4=right, 9=START |
 | 2 | Action | 0=none, 1=shoot |
-| 3-7 | Reserved | 0x00 |
+| 3–7 | Reserved | 0x00 |
+
+## Repository Structure
+```
+space-invaders-on-fpga/
+├── esp/                 # Verilog source files
+├── rtl/                 # XDC pin constraints (Nexys A7)
+├── scripts/             # ESP32 firmware + wiring guide
+├── create_project.tcl   # Recreates Vivado project from source
+└── readme.md
+```
