@@ -5,8 +5,8 @@ Real-time streaming graphics system implementing Space Invaders on FPGA with VGA
 ![PXL_20260125_151322105 MP](https://github.com/user-attachments/assets/1050ab68-de02-48a6-b7e5-e06620c5af32)
 
 ## Hardware
-- **FPGA:** Nexys A7-100T
-- **Controller:** PS5 DualSense
+- **FPGA:** Nexys A7 100T (Artix-7 FPGA)
+- **Controller:** PS5 DualSense controller
 - **Bridge:** ESP32 dev board
 - **Display:** VGA monitor (640×480 @ 60Hz)
 
@@ -28,7 +28,7 @@ Real-time streaming graphics system implementing Space Invaders on FPGA with VGA
 
 ## Quick Start
 
-1. **FPGA:** See [Building from Source](#building-from-source) below
+1. **FPGA:** See 'Building from Source' below
 2. **ESP32:** Wire GPIO17→C17, GPIO16←D18, GND→GND
 3. **Controller:** Follow `esp32/README.md` for DualSense pairing
 4. **Play:** Press PS button, game auto-starts
@@ -53,15 +53,15 @@ Requires **Vivado 2022.x or later**.
 ```
 PS5 Controller (BLE) → ESP32 → UART → stream_adapter → stream_router
                                             ↓
-                        ┌───────────────────┼───────────────────┐
-                        ↓                   ↓                   ↓
-                   Player Ship         Projectiles         Enemy Grid
-                        ↓                   ↓                   ↓
-                   Collision Detection (spatial_intersect)
-                        ↓
-                   VGA Mixer (Priority: Bullet > Player > Enemies)
-                        ↓
-                   VGA Output (640×480 @ 60Hz)
+                            ┌───────────────┼───────────────┐
+                            ↓               ↓               ↓
+                       Player Ship     Projectiles     Enemy Grid
+                            ↓               ↓               ↓
+                          Collision Detection (spatial_intersect)
+                                            ↓
+                      VGA Mixer (Priority: Bullet > Player > Enemies)
+                                            ↓
+                              VGA Output (640×480 @ 60Hz)
 ```
 
 ## Controls
@@ -83,12 +83,5 @@ PS5 Controller (BLE) → ESP32 → UART → stream_adapter → stream_router
 | 2 | Action | 0=none, 1=shoot |
 | 3–7 | Reserved | 0x00 |
 
-## Repository Structure
-```
-space-invaders-on-fpga/
-├── esp/                 # Verilog source files
-├── rtl/                 # XDC pin constraints (Nexys A7)
-├── scripts/             # ESP32 firmware + wiring guide
-├── create_project.tcl   # Recreates Vivado project from source
-└── readme.md
-```
+***
+Check out detailed documentation [here](https://languid-suit-427.notion.site/4-Top-module-33728a1af16d80bf829ce6f4d39f5920?pvs=74).
